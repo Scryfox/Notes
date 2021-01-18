@@ -45,3 +45,48 @@
   - Security Context - Access token that id's user, security groups, priviliges and more
   - Process ID - Unique identifier, internally part of an identifier called client ID
   - At Least One Thread of Execution - Technically optionally, but such a process would be largely useless
+  - Security context - stored in an access token object
+  - List of Open Handles - point to objects like files, shared memory sections or a synchronization object
+  - Virtual Address Descriptors (VADs) - data structures used by memory manager to track virtual addresses used by proccess
+
+### Threads
+
+- Entity within proccess that Windows schedules for execution, made up of:
+  - Contents of a set of CPU registers representing the state of the processor
+  - Two stacks; one for kernel mode, the other for user mode
+  - Private storage called *thread-local storage (TLS)*
+  - A unique identifier called a *thread ID* (thread and proccess IDs never overlap)
+- Threads can also have their own security context to impersonate that of their clients
+- A thread's context is composed of it's volatile & non-volatile registers and private storage
+  - This structure is architecture specific
+- Two mechanisms are used to reduce cost of switching threads: *fibers and user-mode scheduling (UMS)*
+- Threads share the processes virtual address space & other resources
+  - This means all threads have full permissions & accesss to whole proccess virtual address space
+- Cannot access other virtual address spaces however (unless they are mapped into it's private address space)
+  - A process may also be able to access another proccess to use cross-process memory functions
+
+### Fibers
+
+- Allow applications to schedule it's own threads rather than having Windows do it
+- Often called *lightweight threads*
+- They are invisible to the kernel as they are implemented in user mode (in Kernel32.dll)
+- Fibers can be composed of their own fibers
+
+### User-mode scheduling threads
+
+- Only available on 64-bit Windows versions
+- Similar to fibers, but visible to the kernel which allows them to issue blocking system calls and share resources
+- Can switch contexts in user mode by yielding, thus not involving the scheduler
+  - From kernel prespective, nothing has changed until an operation involving the kernel occurs
+  - Once kernel involved, *directed context switch* occurs, and dedicated kernel-mode thread is switched to
+- Concurrent UMS threads cannot run on multiple proccessors, but do still follow a pre-emptive model
+
+### Jobs
+
+- Extension to the process model that already exists in Windows
+- Allows gruops of proccesses to be managed and manipulated as a group
+- Allows control of certain attributes and limits for associated processes, as well as records basic accounting info
+- Compensates from lack of structured process tree in Windows, often more powerful that UNIX-style process trees
+
+### Virtual Memory
+
