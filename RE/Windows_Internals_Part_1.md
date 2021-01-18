@@ -90,3 +90,59 @@
 
 ### Virtual Memory
 
+- Based on flat (linear) address space that provides the illusion of a large, private address space
+  - Provides logical view of memory that may not correspond to its physical layout
+- At runtime, memory manager translates virtual addresses to physical addresses
+  - Allows OS to ensure processes don't bump into each other or the OS data
+- Due to virtual memory being much more than physical, the manager *pages* some of the memory to disk
+  - Paging frees physical memory for other proesses or the OS itself, bringing th paged data back when needed later
+- Pages usually are fixed size (4k by default), though the pages are not necessarily contiguous
+- Virtual address spaces vary by hardware
+  - x86 (32 bit) - maximum VAD is 4GB, the lower half for user storage, the upper half for OS memory
+    - The upper halves usually are the same, consisting of the OS's virtual memory
+- Boot time options can alter this layout, for instance giving users 3GB and OS only 1 GB
+  - Usually used for database applications to help prevent paging as much due to large volumes of data
+- For large databases, *Address Windowing Extensions (AWE)* allow 32-bit applications to allocate 64 GB of physical memory
+  - Views are mapped into the virtual address space, allowing parts of the physical memory to be accessed at a time
+- x64 (64 bit) - 128 TB as of Window 8.1, though theoretically could go much higher
+
+### Kernel Mode vs. User Mode
+
+- Windows uses two processor modes, even if architecture allows for more:
+  - User Mode - application code
+  - Kernel Mode - OS code (system services, drivers)
+- On x86/64, there are 4 "rings" of privilege, but only 0 & 3 are used for kernel & user modes respectively
+- User mode processes have their own virtual address space, kernel mode OS & device driver code share one virtual address space
+- Pages are tagged to indicate the access mode the processor must be in to access them 
+  - System space = kernel, user space = either
+  - Pages can also be read-only (usually containing static content), and are not writable in either mode
+- On processors with no-execute memory protection, Windows marks data pages as non-executable (Data Execution Protection (DEP))
+- In kernel mode, there's no read/write protection for private system memory
+  - Once in kernel mode, OS & device driver code can bypass Windows security access objects
+- Driver code has complete access to the OS data, thus can be very high risk
+  - Windows 2000 added a driver-signing mechanism to warn of unsigned plug-and-play drivers (though doesn't affect other drivers)
+  - Driver Verifier also helps device dirver writers find bugs that can cause security issues
+- On 64 bit and ARM versions of Windows 8.1, kernel-mode code-signing (KMCS) dictates all drivers must be signed
+  - Users cannot explicitly force install of an unsigned driver, even as admin
+- On Windows 10, all new drivers must be signed by only two accepted certification authorities, then by Microsoft
+- Certain vendors/platroms/enterprise configs can customize there policies (such as Device Guard technology)
+- User code must switch to kernel mode to make system calls, using a special processor instruction
+  - A mode transition is *not* a context switch, thus doesn't affect thread scheduling *per se*
+- Typically, more graphics intensive programs run in kernel mode
+  - Advanced applications like Direct2D do usermode calculations then pass final results to kernel, so this may shift time spent
+
+### Hypervisor
+
+- Specialized & highly privileged component that allows virtualization and isolation of all resources on the machine
+- Has greater access than the kernel itself, allowing it to provide new services known as *virtualization-based security (VBS)*
+  - Device Guard - Provides Hypervisor Code Integrity (HVCI) for code-signing guarentees & customization of signature policies
+  - Hyper Guard - Protects key kernel-related and hypervisor-related data structures and code
+  - Credential Guard - Prevents unauthorized access to domain account credentials & secrets
+  - Application Guard - Provides strong sandbox for Microsoft Edge browser
+  - Host Guardian and Shielded Fabric - Leverage a virtual TPM (v-TPM) to protect a vm from the infrastructure it's running on
+- The key advantage is that these protections are not vulnerable to driver risks, signed or not
+  - Virtual Trust Levels (VTLs) define leves of privilage in the hypervisor to enable this protection
+    - VTL 0 - the OS and it's components (lower privilage)
+    - VTL 1 - VBS technologies (higher privilage), thus cannot be affected by kernel code
+  
+### Firmware
